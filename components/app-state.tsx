@@ -34,6 +34,11 @@ interface AppContextType {
     reason: string;
   }) => Promise<{ ok: boolean; message: string }>;
   createEvent: (payload: Omit<Event, 'id' | 'managerIds' | 'playerIds'> & { playerIds: string[] }) => Promise<void>;
+  updateEventPlayerAssignment: (
+    eventId: string,
+    playerId: string,
+    inEvent: boolean
+  ) => Promise<{ ok: boolean; message: string }>;
   sendNotification: (payload: Omit<Notification, 'id' | 'createdAt'>) => Promise<void>;
   createMoneyGame: (payload: {
     name: string;
@@ -281,6 +286,42 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
+  const updateEventPlayerAssignment: AppContextType['updateEventPlayerAssignment'] = async (
+    eventId,
+    playerId,
+    inEvent
+  ) => {
+    if (!currentUser || currentUser.role !== 'manager') {
+      return { ok: false, message: 'Only managers can edit event players.' };
+    }
+
+    const res = await fetch(`/api/events/${eventId}/players`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        managerUserId: currentUser.id,
+        playerId,
+        inEvent
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, message: data.message ?? 'Failed to update event players.' };
+    }
+
+    const nextPlayerIds = (data.playerIds ?? []) as string[];
+
+    setState((prev) => ({
+      ...prev,
+      events: prev.events.map((event) =>
+        event.id === eventId ? { ...event, playerIds: nextPlayerIds } : event
+      )
+    }));
+
+    return { ok: true, message: 'Event players updated.' };
+  };
+
   const sendNotification: AppContextType['sendNotification'] = async (payload) => {
     const notification: Notification = {
       ...payload,
@@ -393,6 +434,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         refreshState,
         updateHoleScore,
         createEvent,
+        updateEventPlayerAssignment,
         sendNotification,
         createMoneyGame,
         joinMoneyGame,
