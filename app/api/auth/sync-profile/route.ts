@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { randomUUID } from 'node:crypto';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
+import { createSupabaseAuthClient } from '@/lib/supabase/auth-client';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 
 interface SyncPayload {
@@ -20,8 +20,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: 'Missing access token.' }, { status: 400 });
   }
 
-  const supabase = createSupabaseAdmin();
-  const authRes = await supabase.auth.getUser(body.accessToken);
+  const authClient = createSupabaseAuthClient();
+  const authRes = await authClient.auth.getUser(body.accessToken);
 
   if (!authRes.data.user) {
     return NextResponse.json({ message: 'Invalid access token.' }, { status: 401 });
@@ -97,3 +97,4 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ profile: meRes.data });
 }
+  const supabase = createSupabaseAdmin();

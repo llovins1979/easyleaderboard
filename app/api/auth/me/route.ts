@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
+import { createSupabaseAuthClient } from '@/lib/supabase/auth-client';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 
 export async function GET(req: Request) {
@@ -11,10 +12,11 @@ export async function GET(req: Request) {
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
   if (!token) return NextResponse.json({ message: 'Missing access token.' }, { status: 401 });
 
-  const supabase = createSupabaseAdmin();
-  const userRes = await supabase.auth.getUser(token);
+  const authClient = createSupabaseAuthClient();
+  const userRes = await authClient.auth.getUser(token);
   if (!userRes.data.user) return NextResponse.json({ message: 'Invalid auth token.' }, { status: 401 });
 
+  const supabase = createSupabaseAdmin();
   const profileRes = await supabase.from('users').select('*').eq('id', userRes.data.user.id).maybeSingle();
 
   return NextResponse.json({ authUser: userRes.data.user, profile: profileRes.data ?? null });
